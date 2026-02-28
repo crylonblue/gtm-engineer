@@ -5,12 +5,15 @@ export default defineSchema({
   agents: defineTable({
     name: v.string(),
     prompt: v.optional(v.string()),
+    role: v.optional(v.string()),
     status: v.union(v.literal("active"), v.literal("paused")),
-    hours: v.number(),
+    hours: v.optional(v.number()),
     cron: v.optional(v.string()),
     guardrails: v.optional(v.string()),
     tools: v.array(v.string()),
+    createdAt: v.optional(v.number()),
     lastRun: v.optional(v.number()),
+    lastRunAt: v.optional(v.number()),
     lastStatus: v.optional(v.string()),
   }),
   conversations: defineTable({
