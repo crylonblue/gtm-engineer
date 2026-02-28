@@ -192,6 +192,7 @@ export default function AgentDetailPage({
         <div className="h-[calc(100vh-14rem)] border rounded-none">
           <ChatArea
             conversationId={conversationId}
+            agentId={id}
             onNewChat={async () => {
               const newId = await createConversation({
                 title: agent.name,

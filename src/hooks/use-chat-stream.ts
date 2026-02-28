@@ -23,7 +23,7 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
-export function useChatStream(conversationId: Id<"conversations"> | null) {
+export function useChatStream(conversationId: Id<"conversations"> | null, agentId?: string) {
   const messages = useQuery(
     api.messages.list,
     conversationId ? { conversationId } : "skip"
@@ -81,6 +81,7 @@ export function useChatStream(conversationId: Id<"conversations"> | null) {
             model: "claude-sonnet-4-20250514",
             max_tokens: 4096,
             stream: true,
+            agentId,
             messages: history,
           }),
           signal: controller.signal,
@@ -155,7 +156,7 @@ export function useChatStream(conversationId: Id<"conversations"> | null) {
         abortRef.current = null;
       }
     },
-    [conversationId, messages, saveMessage, updateMessage, updateTitle]
+    [conversationId, messages, saveMessage, updateMessage, updateTitle, agentId]
   );
 
   const stopGenerating = useCallback(() => {

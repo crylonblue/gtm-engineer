@@ -9,11 +9,12 @@ import { ChatInput } from "./chat-input";
 interface ChatAreaProps {
   conversationId: Id<"conversations"> | null;
   onNewChat: () => Promise<void> | void;
+  agentId?: string;
 }
 
-export function ChatArea({ conversationId, onNewChat }: ChatAreaProps) {
+export function ChatArea({ conversationId, onNewChat, agentId }: ChatAreaProps) {
   const { messages, isGenerating, sendMessage, stopGenerating } =
-    useChatStream(conversationId);
+    useChatStream(conversationId, agentId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
