@@ -2,7 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { getAgent, createRun, updateRun, addRunMessage, updateAgentLastRun } from "../convex/client.js";
-import { buildSystemPrompt } from "./prompt.js";
+import { buildSystemPrompt, DEFAULT_HEARTBEAT_PROMPT } from "./prompt.js";
 import { getAllTools, getToolMetadata } from "../tools/index.js";
 import { toAgentTools } from "../tools/bridge.js";
 import { uploadJson, isR2Enabled } from "../storage/r2.js";
@@ -49,7 +49,10 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     }
 
     const toolMeta = getToolMetadata(agentTools.length < allTools.length ? agentToolNames : undefined);
-    const systemPrompt = buildSystemPrompt(agent.name, agent.prompt ?? "", agent.guardrails, toolMeta);
+    const taskPrompt = trigger === "schedule"
+      ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
+      : (agent.prompt ?? "");
+    const systemPrompt = buildSystemPrompt(agent.name, taskPrompt, agent.guardrails, toolMeta);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
@@ -108,7 +111,10 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
 
     // Run the agent
     console.log(`[runner] Starting agent prompt...`);
-    await piAgent.prompt(`Execute your task. Trigger: ${trigger}`);
+    const kickoffMessage = trigger === "schedule"
+      ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
+      : `Execute your task. Trigger: ${trigger}`;
+    await piAgent.prompt(kickoffMessage);
     await piAgent.waitForIdle();
     console.log(`[runner] Agent finished. messages=${messageCount} tools=${toolUseCount}`);
 

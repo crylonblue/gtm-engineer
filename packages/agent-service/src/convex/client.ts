@@ -13,12 +13,17 @@ function getClient(): ConvexHttpClient {
 }
 
 export interface AgentDoc {
+  _id: string;
   name: string;
   prompt?: string;
   role?: string;
   guardrails?: string;
+  heartbeat?: string;
   tools?: string[];
   status?: string;
+  hours?: number;
+  cron?: string;
+  lastRunAt?: number;
   [key: string]: unknown;
 }
 
@@ -60,4 +65,8 @@ export async function addRunMessage(args: {
 
 export async function updateAgentLastRun(agentId: string, timestamp: number, lastStatus?: string) {
   await getClient().mutation(anyApi.agents.updateLastRun, { id: agentId, lastRunAt: timestamp, lastStatus });
+}
+
+export async function listActiveAgents(): Promise<AgentDoc[]> {
+  return await getClient().query(anyApi.agents.listActive, {}) as AgentDoc[];
 }

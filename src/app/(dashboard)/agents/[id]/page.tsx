@@ -59,6 +59,7 @@ export default function AgentDetailPage({
   const [prompt, setPrompt] = useState("");
   const [hours, setHours] = useState(2);
   const [cron, setCron] = useState("");
+  const [heartbeat, setHeartbeat] = useState("");
   const [guardrails, setGuardrails] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"chat" | "configure" | "runs">("chat");
@@ -78,6 +79,7 @@ export default function AgentDetailPage({
     setPrompt(agent.prompt ?? "");
     setHours(agent.hours ?? 0);
     setCron(agent.cron ?? "");
+    setHeartbeat((agent as Record<string, unknown>).heartbeat as string ?? "");
     setGuardrails(agent.guardrails ?? "");
     setSelectedTools(agent.tools);
   }
@@ -271,6 +273,30 @@ export default function AgentDetailPage({
               }}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Heartbeat Prompt */}
+      <Card className="rounded-none">
+        <CardHeader>
+          <CardTitle>Heartbeat Prompt</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <label className="text-sm font-medium">
+            Prompt used for scheduled (heartbeat) runs
+          </label>
+          <Textarea
+            placeholder="Custom heartbeat prompt. Leave empty to use the default checklist."
+            value={heartbeat}
+            rows={8}
+            onChange={(e) => {
+              setHeartbeat(e.target.value);
+              autosave({ heartbeat: e.target.value });
+            }}
+          />
+          <p className="text-sm text-muted-foreground">
+            When this agent runs on schedule, it uses this prompt instead of the main instruction prompt. Leave blank for the default heartbeat checklist.
+          </p>
         </CardContent>
       </Card>
 

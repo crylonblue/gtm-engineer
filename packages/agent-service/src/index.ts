@@ -11,6 +11,7 @@ import { getToolMetadata, getAllTools } from "./tools/index.js";
 import { toAgentTools } from "./tools/bridge.js";
 import { getAgent } from "./convex/client.js";
 import { buildSystemPrompt } from "./agent/prompt.js";
+import { startScheduler } from "./scheduler.js";
 
 const app = new Hono();
 
@@ -257,3 +258,5 @@ const port = parseInt(process.env.PORT || "3001", 10);
 const hostname = "0.0.0.0";
 console.log(`Starting agent service on ${hostname}:${port}`);
 serve({ fetch: app.fetch, port, hostname });
+
+startScheduler();

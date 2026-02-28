@@ -1,5 +1,19 @@
 import type { ToolMetadata } from "../tools/types.js";
 
+export const DEFAULT_HEARTBEAT_PROMPT = `Perform your routine heartbeat check.
+
+## Checklist
+1. Check for new leads, emails, or messages that need attention
+2. Review any pending or in-progress work items
+3. Look for time-sensitive tasks or deadlines
+4. Process any queued outreach or follow-ups
+
+## Rules
+- If nothing needs attention → HEARTBEAT_OK with a one-line status
+- If you find items requiring action → process them, report HEARTBEAT_ALERT with summary
+- Be efficient — skip checks that don't apply to your configured tools
+- Prioritize urgent items over routine tasks`;
+
 export function buildSystemPrompt(
   name: string,
   prompt: string,

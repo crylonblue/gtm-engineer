@@ -15,6 +15,16 @@ export const get = query({
   },
 });
 
+export const listActive = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("agents")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+  },
+});
+
 export const create = mutation({
   args: {
     name: v.string(),
@@ -23,6 +33,7 @@ export const create = mutation({
     hours: v.number(),
     cron: v.optional(v.string()),
     guardrails: v.optional(v.string()),
+    heartbeat: v.optional(v.string()),
     tools: v.array(v.string()),
   },
   handler: async (ctx, args) => {
@@ -39,6 +50,7 @@ export const update = mutation({
     hours: v.optional(v.number()),
     cron: v.optional(v.string()),
     guardrails: v.optional(v.string()),
+    heartbeat: v.optional(v.string()),
     tools: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
