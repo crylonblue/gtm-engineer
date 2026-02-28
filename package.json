@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:agent": "pnpm --filter gtm-engineer-agent dev",
     "build": "next build",
+    "build:agent": "pnpm --filter gtm-engineer-agent build",
     "start": "next start",
     "lint": "next lint"
   },

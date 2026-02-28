@@ -47,6 +47,18 @@ export const update = mutation({
   },
 });
 
+export const updateLastRun = mutation({
+  args: {
+    id: v.id("agents"),
+    lastRunAt: v.number(),
+    lastStatus: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...fields } = args;
+    await ctx.db.patch(id, fields);
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {

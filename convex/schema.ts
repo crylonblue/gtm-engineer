@@ -75,6 +75,23 @@ export default defineSchema({
     ),
     timestamp: v.number(),
   }).index("by_run", ["runId"]),
+  leads: defineTable({
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    company: v.optional(v.string()),
+    status: v.optional(v.string()),
+    source: v.optional(v.string()),
+    linkedin: v.optional(v.string()),
+    data: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_source", ["source"])
+    .index("by_company", ["company"])
+    .index("by_linkedin", ["linkedin"])
+    .index("by_createdAt", ["createdAt"]),
   messages: defineTable({
     conversationId: v.id("conversations"),
     role: v.union(v.literal("user"), v.literal("assistant")),
