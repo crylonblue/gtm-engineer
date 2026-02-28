@@ -20,7 +20,9 @@ export default defineSchema({
     title: v.string(),
     agentId: v.optional(v.id("agents")),
     lastMessageAt: v.number(),
-  }).index("by_lastMessage", ["lastMessageAt"]),
+  })
+    .index("by_lastMessage", ["lastMessageAt"])
+    .index("by_agent", ["agentId"]),
   runs: defineTable({
     agentId: v.union(v.id("agents"), v.string()),
     status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),

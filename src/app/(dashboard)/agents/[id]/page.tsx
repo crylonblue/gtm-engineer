@@ -9,6 +9,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Search, ChevronDown, Trash2, RefreshCw } from "lucide-react";
 import { RunLogs } from "@/components/runs/run-logs";
+import { ChatArea } from "@/components/chat/chat-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,8 +61,21 @@ export default function AgentDetailPage({
   const [cron, setCron] = useState("");
   const [guardrails, setGuardrails] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"configure" | "runs">("configure");
+  const [activeTab, setActiveTab] = useState<"chat" | "configure" | "runs">("chat");
   const initialized = useRef(false);
+
+  // Chat: find or create a conversation for this agent
+  const agentConversation = useQuery(api.conversations.getByAgent, {
+    agentId: id as Id<"agents">,
+  });
+  const createConversation = useMutation(api.conversations.create);
+  const [conversationId, setConversationId] = useState<Id<"conversations"> | null>(null);
+
+  useEffect(() => {
+    if (agentConversation) {
+      setConversationId(agentConversation._id);
+    }
+  }, [agentConversation]);
 
   useEffect(() => {
     if (agent && !initialized.current) {
@@ -152,6 +166,13 @@ export default function AgentDetailPage({
       {/* Tab row */}
       <div className="flex items-center gap-1">
         <Button
+          variant={activeTab === "chat" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("chat")}
+        >
+          Chat
+        </Button>
+        <Button
           variant={activeTab === "configure" ? "default" : "ghost"}
           size="sm"
           onClick={() => setActiveTab("configure")}
@@ -166,6 +187,21 @@ export default function AgentDetailPage({
           Run &amp; Logs
         </Button>
       </div>
+
+      {activeTab === "chat" && (
+        <div className="h-[calc(100vh-14rem)] border rounded-none">
+          <ChatArea
+            conversationId={conversationId}
+            onNewChat={async () => {
+              const newId = await createConversation({
+                title: agent.name,
+                agentId: id as Id<"agents">,
+              });
+              setConversationId(newId);
+            }}
+          />
+        </div>
+      )}
 
       {activeTab === "runs" && (
         <RunLogs agentId={id as Id<"agents">} />

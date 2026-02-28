@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
-import { EmptyState } from "./empty-state";
 
 interface ChatAreaProps {
   conversationId: Id<"conversations"> | null;
-  onNewChat: () => void;
+  onNewChat: () => Promise<void> | void;
 }
 
 export function ChatArea({ conversationId, onNewChat }: ChatAreaProps) {
   const { messages, isGenerating, sendMessage, stopGenerating } =
     useChatStream(conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -26,17 +26,22 @@ export function ChatArea({ conversationId, onNewChat }: ChatAreaProps) {
     }
   }, [messages]);
 
-  if (!conversationId) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1">
-          <EmptyState />
-        </div>
-      </div>
-    );
-  }
+  // When conversation is created and we have a pending message, send it
+  useEffect(() => {
+    if (conversationId && pendingMessage) {
+      const msg = pendingMessage;
+      setPendingMessage(null);
+      sendMessage(msg);
+    }
+  }, [conversationId, pendingMessage, sendMessage]);
 
   const handleSend = async (text: string) => {
+    if (!conversationId) {
+      // Create conversation first, then send once it's ready
+      setPendingMessage(text);
+      await onNewChat();
+      return;
+    }
     await sendMessage(text);
   };
 

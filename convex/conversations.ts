@@ -12,6 +12,16 @@ export const list = query({
   },
 });
 
+export const getByAgent = query({
+  args: { agentId: v.id("agents") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("conversations")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .first();
+  },
+});
+
 export const create = mutation({
   args: {
     title: v.string(),
