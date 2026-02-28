@@ -30,13 +30,23 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     }
 
     // Determine which tools this agent can use
-    const agentToolNames = agent.tools;
-    const toolMeta = getToolMetadata(agentToolNames);
-    const systemPrompt = buildSystemPrompt(agent.name, agent.prompt ?? "", agent.guardrails, toolMeta);
+    const agentToolNames = agent.tools ?? [];
+    const filterNames = agentToolNames.length > 0 ? agentToolNames : undefined;
 
     // Convert Zod tools to pi-agent-core AgentTools
     const allTools = getAllTools();
-    const agentTools = toAgentTools(allTools, agentToolNames);
+    let agentTools = toAgentTools(allTools, filterNames);
+
+    // Fall back to all tools if configured names don't match any registered tools
+    if (filterNames && agentTools.length === 0) {
+      const registeredNames = new Set(allTools.map(t => t.name));
+      const missing = agentToolNames.filter(n => !registeredNames.has(n));
+      console.warn(`[runner] WARNING: agent has ${agentToolNames.length} configured tool(s) but none matched the registry. Unrecognized names: [${missing.join(", ")}]. Falling back to ALL tools.`);
+      agentTools = toAgentTools(allTools);
+    }
+
+    const toolMeta = getToolMetadata(agentTools.length < allTools.length ? agentToolNames : undefined);
+    const systemPrompt = buildSystemPrompt(agent.name, agent.prompt ?? "", agent.guardrails, toolMeta);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");

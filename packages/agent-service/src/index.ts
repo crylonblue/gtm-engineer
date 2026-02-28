@@ -107,18 +107,31 @@ app.post("/api/stream", async (c) => {
       if (agentDoc) {
         const agentToolNames = agentDoc.tools ?? [];
         console.log(`[stream] agent="${agentDoc.name}" configuredTools=[${agentToolNames.join(", ")}]`);
-        const toolMeta = getToolMetadata(agentToolNames);
-        console.log(`[stream] toolMeta=${toolMeta.length} items`);
+
+        const allTools = getAllTools();
+        console.log(`[stream] registry has ${allTools.length} tools`);
+        const filterNames = agentToolNames.length > 0 ? agentToolNames : undefined;
+        agentTools = toAgentTools(allTools, filterNames);
+
+        // Fall back to all tools if configured names don't match any registered tools
+        if (filterNames && agentTools.length === 0) {
+          const registeredNames = new Set(allTools.map(t => t.name));
+          const missing = agentToolNames.filter(n => !registeredNames.has(n));
+          console.warn(`[stream] WARNING: agent has ${agentToolNames.length} configured tool(s) but none matched the registry. Unrecognized names: [${missing.join(", ")}]. Falling back to ALL tools.`);
+          agentTools = toAgentTools(allTools);
+        }
+
+        console.log(`[stream] passing ${agentTools.length} tools to Agent: [${agentTools.map(t => t.name).join(", ")}]`);
+
+        // Build system prompt with the resolved tool list
+        const resolvedToolNames = agentTools.map(t => t.name);
+        const toolMeta = getToolMetadata(resolvedToolNames);
         systemPrompt = buildSystemPrompt(
           agentDoc.name,
           agentDoc.prompt ?? "",
           agentDoc.guardrails,
           toolMeta
         );
-        const allTools = getAllTools();
-        console.log(`[stream] registry has ${allTools.length} tools`);
-        agentTools = toAgentTools(allTools, agentToolNames.length > 0 ? agentToolNames : undefined);
-        console.log(`[stream] passing ${agentTools.length} tools to Agent: [${agentTools.map(t => t.name).join(", ")}]`);
       }
     } catch (err) {
       console.error("[stream] Failed to load agent config:", err);

@@ -17,18 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-// TODO: replace with dynamically fetched endpoints
-const AVAILABLE_TOOLS = [
-  "createAutomation",
-  "createCampaign",
-  "createDraftPost",
-  "createKnowledgeSource",
-  "enrollLeads",
-  "getCampaignMessages",
-  "getCampaignStats",
-  "getContentAnalytics",
-];
-
 export function NewAgentForm() {
   const router = useRouter();
   const create = useMutation(api.agents.create);
@@ -40,13 +28,11 @@ export function NewAgentForm() {
   const [hours, setHours] = useState(2);
   const [cron, setCron] = useState("");
   const [guardrails, setGuardrails] = useState("");
-  const [selectedTools, setSelectedTools] = useState<string[]>([
-    ...AVAILABLE_TOOLS,
-  ]);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
   const createdRef = useRef(false);
 
-  // Create agent in Convex on mount
+  // Create agent in Convex on mount — empty tools array means "all tools"
   useEffect(() => {
     if (createdRef.current) return;
     createdRef.current = true;
@@ -54,7 +40,7 @@ export function NewAgentForm() {
       name: "Untitled automation",
       status: "paused",
       hours: 2,
-      tools: [...AVAILABLE_TOOLS],
+      tools: [],
     }).then((id) => {
       setAgentId(id);
       router.replace(`/agents/${id}`);
