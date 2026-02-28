@@ -97,6 +97,7 @@ export function useChatStream(conversationId: Id<"conversations"> | null, agentI
         const decoder = new TextDecoder();
         let accumulated = "";
         let buffer = "";
+        const toolCalls: ToolCall[] = [];
 
         while (true) {
           const { done, value } = await reader.read();
@@ -110,21 +111,53 @@ export function useChatStream(conversationId: Id<"conversations"> | null, agentI
             if (line.startsWith("data: ")) {
               const data = line.slice(6).trim();
               if (data === "[DONE]") continue;
+
+              let parsed: Record<string, unknown>;
               try {
-                const parsed = JSON.parse(data);
-                if (
-                  parsed.type === "content_block_delta" &&
-                  parsed.delta?.type === "text_delta" &&
-                  parsed.delta?.text
-                ) {
-                  accumulated += parsed.delta.text;
-                  await updateMessage({
-                    id: assistantMsgId,
-                    content: accumulated,
-                  });
-                }
+                parsed = JSON.parse(data);
               } catch {
-                // skip unparseable lines
+                continue; // skip unparseable lines
+              }
+
+              if (parsed.type === "error") {
+                const errObj = parsed.error as Record<string, unknown> | undefined;
+                throw new Error((errObj?.message as string) ?? "Agent error");
+              }
+
+              if (
+                parsed.type === "content_block_delta" &&
+                (parsed.delta as Record<string, unknown>)?.type === "text_delta" &&
+                (parsed.delta as Record<string, unknown>)?.text
+              ) {
+                accumulated += (parsed.delta as Record<string, unknown>).text as string;
+                await updateMessage({
+                  id: assistantMsgId,
+                  content: accumulated,
+                  ...(toolCalls.length > 0 && { toolCalls: [...toolCalls] }),
+                });
+              } else if (parsed.type === "tool_call_start") {
+                toolCalls.push({
+                  id: parsed.toolCallId as string,
+                  name: parsed.toolName as string,
+                  args: parsed.args as string,
+                  status: "running",
+                });
+                await updateMessage({
+                  id: assistantMsgId,
+                  content: accumulated,
+                  toolCalls: [...toolCalls],
+                });
+              } else if (parsed.type === "tool_call_end") {
+                const tc = toolCalls.find((t) => t.id === parsed.toolCallId);
+                if (tc) {
+                  tc.status = parsed.isError ? "error" : "complete";
+                  tc.result = parsed.result as string;
+                }
+                await updateMessage({
+                  id: assistantMsgId,
+                  content: accumulated,
+                  toolCalls: [...toolCalls],
+                });
               }
             }
           }
@@ -135,6 +168,7 @@ export function useChatStream(conversationId: Id<"conversations"> | null, agentI
           id: assistantMsgId,
           content: accumulated,
           isStreaming: false,
+          ...(toolCalls.length > 0 && { toolCalls: [...toolCalls] }),
         });
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") {

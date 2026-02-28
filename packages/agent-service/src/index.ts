@@ -150,7 +150,7 @@ app.post("/api/stream", async (c) => {
 
   return honoStream(c, async (stream) => {
     try {
-      // Subscribe to agent events and forward text deltas + tool events
+      // Subscribe to agent events and forward text deltas + structured tool events
       piAgent.subscribe((event) => {
         if (event.type === "message_update") {
           const ae = event.assistantMessageEvent;
@@ -162,16 +162,24 @@ app.post("/api/stream", async (c) => {
             stream.write(`data: ${payload}\n\n`);
           }
         } else if (event.type === "tool_execution_start") {
+          const ev = event as Record<string, unknown>;
+          const args = ev.args ?? ev.input ?? {};
           const payload = JSON.stringify({
-            type: "content_block_delta",
-            delta: { type: "text_delta", text: `\n\n> **Using tool:** ${event.toolName}\n\n` },
+            type: "tool_call_start",
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            args: typeof args === "string" ? args : JSON.stringify(args),
           });
           stream.write(`data: ${payload}\n\n`);
         } else if (event.type === "tool_execution_end") {
-          const status = event.isError ? "failed" : "done";
+          const ev = event as Record<string, unknown>;
+          const result = ev.result;
           const payload = JSON.stringify({
-            type: "content_block_delta",
-            delta: { type: "text_delta", text: `> **Tool ${event.toolName}:** ${status}\n\n` },
+            type: "tool_call_end",
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            result: typeof result === "string" ? result : JSON.stringify(result ?? {}),
+            isError: event.isError,
           });
           stream.write(`data: ${payload}\n\n`);
         }
