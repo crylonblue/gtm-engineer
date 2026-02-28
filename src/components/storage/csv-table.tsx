@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 /* ── Inline CSV parser (handles quoted fields) ── */
 
@@ -45,6 +45,21 @@ function parseCsv(csv: string): string[][] {
   return rows;
 }
 
+/** Escape a single CSV field (wrap in quotes if it contains comma, quote, or newline) */
+function escapeCsvField(field: string): string {
+  if (field.includes(",") || field.includes('"') || field.includes("\n")) {
+    return '"' + field.replace(/"/g, '""') + '"';
+  }
+  return field;
+}
+
+function rowsToCsv(headers: string[], data: string[][]): string {
+  const lines = [headers, ...data].map((row) =>
+    row.map(escapeCsvField).join(",")
+  );
+  return lines.join("\n");
+}
+
 /* ── Sorting ── */
 
 type SortDir = "asc" | "desc" | null;
@@ -82,12 +97,15 @@ export function CsvTable({ csv, onEdit, onChange, maxHeight = "400px" }: CsvTabl
     return <pre className="bg-muted p-3 text-xs font-mono overflow-x-auto">{csv}</pre>;
   }
 
+  const editable = !!(onEdit || onChange);
   const headers = parsed[0];
+  const colCount = headers.length;
   const [dataRows, setDataRows] = useState(() => parsed.slice(1));
   const [sortCol, setSortCol] = useState<number | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [editing, setEditing] = useState<{ r: number; c: number } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const tableRef = useRef<HTMLTableElement>(null);
 
   const handleSort = (colIdx: number) => {
     let nextDir: SortDir;
@@ -106,26 +124,61 @@ export function CsvTable({ csv, onEdit, onChange, maxHeight = "400px" }: CsvTabl
 
   const startEdit = useCallback(
     (r: number, c: number) => {
-      if (!onEdit && !onChange) return;
+      if (!editable) return;
       setEditing({ r, c });
       setEditValue(dataRows[r][c] ?? "");
     },
-    [dataRows, onEdit, onChange],
+    [dataRows, editable],
+  );
+
+  const emitChange = useCallback(
+    (updated: string[][]) => {
+      if (onChange) {
+        onChange(rowsToCsv(headers, updated));
+      }
+    },
+    [headers, onChange],
   );
 
   const commitEdit = useCallback(() => {
     if (!editing) return;
     const { r, c } = editing;
+    if (dataRows[r][c] === editValue) {
+      setEditing(null);
+      return;
+    }
     const updated = dataRows.map((row) => [...row]);
     updated[r][c] = editValue;
     setDataRows(updated);
     onEdit?.(r, c, editValue);
-    if (onChange) {
-      const allRows = [headers, ...updated];
-      onChange(allRows.map((row) => row.join(",")).join("\n"));
-    }
+    emitChange(updated);
     setEditing(null);
-  }, [editing, editValue, dataRows, headers, onEdit, onChange]);
+  }, [editing, editValue, dataRows, onEdit, emitChange]);
+
+  const commitAndMove = useCallback(
+    (dr: number, dc: number) => {
+      if (!editing) return;
+      // Commit current cell
+      const { r, c } = editing;
+      const updated = dataRows.map((row) => [...row]);
+      if (updated[r][c] !== editValue) {
+        updated[r][c] = editValue;
+        setDataRows(updated);
+        onEdit?.(r, c, editValue);
+        emitChange(updated);
+      }
+      // Move to next cell
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < updated.length && nc >= 0 && nc < colCount) {
+        setEditing({ r: nr, c: nc });
+        setEditValue(updated[nr][nc] ?? "");
+      } else {
+        setEditing(null);
+      }
+    },
+    [editing, editValue, dataRows, colCount, onEdit, emitChange],
+  );
 
   const cancelEdit = useCallback(() => setEditing(null), []);
 
@@ -136,7 +189,7 @@ export function CsvTable({ csv, onEdit, onChange, maxHeight = "400px" }: CsvTabl
 
   return (
     <div className="overflow-auto border" style={{ maxHeight }}>
-      <table className="w-full text-sm">
+      <table ref={tableRef} className="w-full text-sm">
         <thead className="border-b bg-muted/50 sticky top-0 z-10">
           <tr>
             {headers.map((h, i) => (
@@ -153,30 +206,48 @@ export function CsvTable({ csv, onEdit, onChange, maxHeight = "400px" }: CsvTabl
         </thead>
         <tbody>
           {displayed.map((row, ri) => (
-            <tr key={ri}>
-              {row.map((cell, ci) => (
-                <td
-                  key={ci}
-                  className="px-4 py-2 border-t"
-                  onDoubleClick={() => startEdit(ri, ci)}
-                >
-                  {editing?.r === ri && editing?.c === ci ? (
-                    <input
-                      className="w-full bg-background border px-1 py-0.5 text-xs font-mono"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={commitEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitEdit();
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    cell
-                  )}
-                </td>
-              ))}
+            <tr key={ri} className="group">
+              {row.map((cell, ci) => {
+                const isEditing = editing?.r === ri && editing?.c === ci;
+                return (
+                  <td
+                    key={ci}
+                    className={`px-4 py-2 border-t ${
+                      editable && !isEditing
+                        ? "cursor-text hover:bg-accent/40 transition-colors"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      if (!isEditing) startEdit(ri, ci);
+                    }}
+                  >
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-background border border-primary/50 ring-1 ring-primary/20 px-1 py-0.5 text-xs font-mono rounded-sm outline-none"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={commitEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitAndMove(1, 0); // move down
+                          } else if (e.key === "Tab") {
+                            e.preventDefault();
+                            commitAndMove(0, e.shiftKey ? -1 : 1);
+                          } else if (e.key === "Escape") {
+                            cancelEdit();
+                          }
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className={cell ? "" : "text-muted-foreground/40 italic"}>
+                        {cell || (editable ? "empty" : "")}
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
