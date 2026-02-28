@@ -16,15 +16,15 @@ function timeAgo(ts: number): string {
 
 type Run = {
   status: "running" | "completed" | "failed";
-  phase: string;
+  phase?: string;
   trigger: "schedule" | "manual";
   startedAt: number;
   endedAt?: number;
-  tasks: number;
-  discovered: number;
-  processed: number;
-  failed: number;
-  skipped: number;
+  tasks?: number;
+  discovered?: number;
+  processed?: number;
+  failed?: number;
+  skipped?: number;
 };
 
 function statusVariant(status: string) {
@@ -41,15 +41,15 @@ function statusClass(status: string) {
 
 export function RunSummary({ run }: { run: Run }) {
   const fields = [
-    ["Phase", run.phase],
+    ["Phase", run.phase ?? "—"],
     ["Trigger", run.trigger],
     ["Started", timeAgo(run.startedAt)],
     ["Ended", run.endedAt ? timeAgo(run.endedAt) : "—"],
-    ["Tasks", run.tasks],
-    ["Discovered", run.discovered],
-    ["Processed", run.processed],
-    ["Failed", run.failed],
-    ["Skipped", run.skipped],
+    ["Tasks", run.tasks ?? 0],
+    ["Discovered", run.discovered ?? 0],
+    ["Processed", run.processed ?? 0],
+    ["Failed", run.failed ?? 0],
+    ["Skipped", run.skipped ?? 0],
   ] as const;
 
   return (
