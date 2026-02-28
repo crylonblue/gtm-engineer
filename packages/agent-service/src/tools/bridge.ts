@@ -37,21 +37,30 @@ export function toAgentTool(tool: ToolDefinition): AgentTool {
       _toolCallId: string,
       params: unknown,
     ): Promise<AgentToolResult<unknown>> => {
-      // Validate with Zod (keeps existing validation logic)
-      const parsed = tool.parameters.parse(params);
-      const result = await tool.execute(parsed);
+      try {
+        // Validate with Zod (keeps existing validation logic)
+        const parsed = tool.parameters.parse(params);
+        const result = await tool.execute(parsed);
 
-      if (result.success) {
-        const data = result.data as { text?: string } | undefined;
-        const text = data?.text ?? JSON.stringify(result.data);
+        if (result.success) {
+          const data = result.data as { text?: string } | undefined;
+          const text = data?.text ?? JSON.stringify(result.data);
+          return {
+            content: [{ type: "text", text }],
+            details: result.data,
+          };
+        } else {
+          return {
+            content: [{ type: "text", text: `Tool error: ${result.error}` }],
+            details: { error: result.error },
+          };
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[ToolBridge] ${tool.name} threw: ${message}`);
         return {
-          content: [{ type: "text", text }],
-          details: result.data,
-        };
-      } else {
-        return {
-          content: [{ type: "text", text: `Tool error: ${result.error}` }],
-          details: { error: result.error },
+          content: [{ type: "text", text: `Tool error: ${message}` }],
+          details: { error: message },
         };
       }
     },

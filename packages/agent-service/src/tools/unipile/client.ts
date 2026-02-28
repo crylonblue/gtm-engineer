@@ -14,6 +14,7 @@ class UnipileClient {
     path: string,
     body?: unknown
   ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       "X-API-KEY": this.accessToken,
       Accept: "application/json",
@@ -23,15 +24,23 @@ class UnipileClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[UnipileClient] ${method} ${url} - network error: ${message}`);
+      throw new Error(`Unipile network error for ${method} ${url}: ${message}`);
+    }
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(`Unipile API error ${response.status}: ${text}`);
+      console.error(`[UnipileClient] ${method} ${url} - HTTP ${response.status}: ${text}`);
+      throw new Error(`Unipile API error ${response.status} for ${method} ${url}: ${text}`);
     }
 
     return response.json() as Promise<T>;

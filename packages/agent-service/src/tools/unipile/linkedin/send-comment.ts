@@ -10,10 +10,11 @@ const parameters = z.object({
 type Params = z.infer<typeof parameters>;
 
 async function execute(params: Params): Promise<ToolResult> {
+  console.log(`[sendComment] post_id=${params.post_id}, text=${params.text.substring(0, 80)}...`);
   const client = getUnipileClient();
-  const data = await client.post(`/api/v1/posts/${encodeURIComponent(params.post_id)}/comments`, {
-    text: params.text,
-  });
+  const path = `/api/v1/posts/${encodeURIComponent(params.post_id)}/comments`;
+  const data = await client.post(path, { text: params.text });
+  console.log(`[sendComment] success:`, JSON.stringify(data).substring(0, 200));
   return { success: true, data };
 }
 
