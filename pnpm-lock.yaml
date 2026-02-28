@@ -11,6 +11,9 @@ importers:
       '@ai-sdk/anthropic':
         specifier: ^3.0.50
         version: 3.0.50(zod@4.3.6)
+      '@aws-sdk/client-s3':
+        specifier: ^3.1000.0
+        version: 3.1000.0
       ai:
         specifier: ^6.0.105
         version: 6.0.105(zod@4.3.6)

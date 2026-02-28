@@ -10,9 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { FileViewer } from "@/components/storage/file-viewer";
 
-const AGENT_URL =
-  process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
-
 function getFileIcon(key: string) {
   if (key.endsWith(".csv")) return <FileText size={14} className="text-green-500 shrink-0" />;
   if (key.endsWith(".json")) return <File size={14} className="text-blue-500 shrink-0" />;
@@ -38,7 +35,7 @@ export default function StoragePage() {
     setLoadingKeys(true);
     try {
       const res = await fetch(
-        `${AGENT_URL}/api/storage/list?prefix=${encodeURIComponent(prefix)}`,
+        `/api/storage/list?prefix=${encodeURIComponent(prefix)}`,
       );
       const data = await res.json();
       setKeys(data.keys ?? []);
@@ -60,7 +57,7 @@ export default function StoragePage() {
     setFileContent(null);
     try {
       const res = await fetch(
-        `${AGENT_URL}/api/storage/get?key=${encodeURIComponent(key)}`,
+        `/api/storage/get?key=${encodeURIComponent(key)}`,
       );
       const data = await res.json();
       setFileContent(data.content);

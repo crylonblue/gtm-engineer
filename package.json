@@ -16,6 +16,7 @@
   "description": "",
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
+    "@aws-sdk/client-s3": "^3.1000.0",
     "ai": "^6.0.105",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
