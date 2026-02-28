@@ -17,12 +17,14 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     }
 
     // Create a run record
+    console.log(`[runner] Creating run for agent=${agentId} trigger=${trigger}`);
     runId = await createRun({
       agentId,
       trigger,
       status: "running",
       startedAt: Date.now(),
     });
+    console.log(`[runner] Run created: ${runId}`);
 
     // Snapshot agent config to R2
     if (isR2Enabled()) {
@@ -104,10 +106,13 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     });
 
     // Run the agent
+    console.log(`[runner] Starting agent prompt...`);
     await piAgent.prompt(`Execute your task. Trigger: ${trigger}`);
     await piAgent.waitForIdle();
+    console.log(`[runner] Agent finished. messages=${messageCount} tools=${toolUseCount}`);
 
     // Update run as completed
+    console.log(`[runner] Updating run ${runId} as completed...`);
     await updateRun(runId!, {
       status: "completed",
       completedAt: Date.now(),
@@ -115,6 +120,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
       toolUseCount,
     });
 
+    console.log(`[runner] Updating agent lastRun...`);
     await updateAgentLastRun(agentId, Date.now(), "completed");
 
     // Store run artifacts to R2 (fire-and-forget)
