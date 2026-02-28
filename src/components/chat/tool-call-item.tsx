@@ -110,7 +110,7 @@ function StatusBadge({ status }: { status: ToolCall["status"] }) {
 }
 
 export function ToolCallItem({ toolCall }: ToolCallItemProps) {
-  const [expanded, setExpanded] = useState(toolCall.status !== "complete");
+  const [expanded, setExpanded] = useState(false);
   const Icon = getToolIcon(toolCall.name);
   const arrayData = toolCall.result ? tryParseArray(toolCall.result) : null;
 

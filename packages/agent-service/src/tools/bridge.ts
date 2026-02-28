@@ -14,6 +14,9 @@ import type { ToolDefinition } from "./types.js";
  */
 function zodToTypeBoxSchema(zodSchema: z.ZodType): TSchema {
   const jsonSchema = z.toJSONSchema(zodSchema) as Record<string, unknown>;
+  // Remove $schema — Zod v4 emits "https://json-schema.org/draft/2020-12/schema"
+  // which AJV (used by pi-agent-core for validation) does not support.
+  delete jsonSchema.$schema;
   // TypeBox schemas are just JSON Schema objects with a Symbol.
   // We can use Type.Unsafe to wrap an arbitrary JSON Schema.
   return Type.Unsafe(jsonSchema);
