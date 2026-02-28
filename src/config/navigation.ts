@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   Bot,
-  Plug,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,10 +26,5 @@ export const navItems: NavItem[] = [
     title: "Agents",
     href: "/agents",
     icon: Bot,
-  },
-{
-    title: "Integrations",
-    href: "/integrations",
-    icon: Plug,
   },
 ];

@@ -179,3 +179,17 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--foreground);
 }
+
+/* ───────────────────────────────────────────
+   Typing cursor — blink animation for streaming
+   ─────────────────────────────────────────── */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.typing-cursor::after {
+  content: "\25CB";
+  animation: blink 0.8s step-end infinite;
+  margin-left: 2px;
+}

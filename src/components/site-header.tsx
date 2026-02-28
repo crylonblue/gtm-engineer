@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 import {
   Breadcrumb,
@@ -32,17 +34,25 @@ function getBreadcrumbs(pathname: string) {
   });
 }
 
-const headerActions: Record<string, { label: string; href: string }> = {
-  "/chat": { label: "New Chat", href: "/chat/new" },
+const linkActions: Record<string, { label: string; href: string }> = {
   "/agents": { label: "New Agent", href: "/agents/new" },
 };
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const breadcrumbs = getBreadcrumbs(pathname);
-  const action = Object.entries(headerActions).find(([prefix]) =>
+  const createConversation = useMutation(api.conversations.create);
+
+  const isOnChat = pathname.startsWith("/chat");
+  const linkAction = Object.entries(linkActions).find(([prefix]) =>
     pathname.startsWith(prefix)
   )?.[1];
+
+  const handleNewChat = async () => {
+    const id = await createConversation({ title: "New conversation" });
+    router.push(`/chat?c=${id}`);
+  };
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
@@ -68,11 +78,17 @@ export function SiteHeader() {
           })}
         </BreadcrumbList>
       </Breadcrumb>
-      {action && (
+      {isOnChat && (
+        <Button size="sm" className="ml-auto" onClick={handleNewChat}>
+          <Plus />
+          New Chat
+        </Button>
+      )}
+      {linkAction && (
         <Button size="sm" className="ml-auto" asChild>
-          <Link href={action.href}>
+          <Link href={linkAction.href}>
             <Plus />
-            {action.label}
+            {linkAction.label}
           </Link>
         </Button>
       )}
