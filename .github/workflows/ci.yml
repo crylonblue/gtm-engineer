@@ -36,7 +36,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm tsc --noEmit
-      - run: pnpm --filter gtm-engineer-agent tsc --noEmit
+      - run: pnpm --filter gtm-engineer-agent exec tsc --noEmit
 
   build:
     name: Build
@@ -51,4 +51,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: pnpm --filter gtm-engineer-agent build
+      - run: pnpm --filter gtm-engineer-agent run build
