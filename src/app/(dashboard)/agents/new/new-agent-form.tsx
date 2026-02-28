@@ -61,7 +61,7 @@ export function NewAgentForm() {
     });
   }, [create, router]);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const autosave = useCallback(
     (fields: Omit<Parameters<typeof update>[0], "id">) => {
