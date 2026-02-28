@@ -6,7 +6,6 @@ export interface ToolResult<T = unknown> {
   error?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ToolDefinition<TParams = any, TResult = any> {
   name: string;
   description: string;

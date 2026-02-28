@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { Check, ChevronDown, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getToolIcon } from "@/lib/tool-icons";
@@ -76,6 +76,10 @@ function SimpleTable({ data }: { data: Record<string, unknown>[] }) {
   );
 }
 
+function ToolIcon({ name }: { name: string }) {
+  return createElement(getToolIcon(name), { size: 14, className: "text-muted-foreground shrink-0" });
+}
+
 function StatusBadge({ status }: { status: ToolCall["status"] }) {
   switch (status) {
     case "pending":
@@ -111,7 +115,6 @@ function StatusBadge({ status }: { status: ToolCall["status"] }) {
 
 export function ToolCallItem({ toolCall }: ToolCallItemProps) {
   const [expanded, setExpanded] = useState(false);
-  const Icon = getToolIcon(toolCall.name);
   const arrayData = toolCall.result ? tryParseArray(toolCall.result) : null;
 
   return (
@@ -121,7 +124,7 @@ export function ToolCallItem({ toolCall }: ToolCallItemProps) {
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
       >
-        <Icon size={14} className="text-muted-foreground shrink-0" />
+        <ToolIcon name={toolCall.name} />
         <span className="font-medium">{humanize(toolCall.name)}</span>
         <div className="ml-auto flex items-center gap-2">
           <StatusBadge status={toolCall.status} />

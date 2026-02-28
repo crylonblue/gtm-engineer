@@ -62,32 +62,25 @@ export default function AgentDetailPage({
   const [guardrails, setGuardrails] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"chat" | "configure" | "runs">("chat");
-  const initialized = useRef(false);
+  const [initializedAgentId, setInitializedAgentId] = useState<string | null>(null);
 
   // Chat: find or create a conversation for this agent
   const agentConversation = useQuery(api.conversations.getByAgent, {
     agentId: id as Id<"agents">,
   });
   const createConversation = useMutation(api.conversations.create);
-  const [conversationId, setConversationId] = useState<Id<"conversations"> | null>(null);
+  const [localConversationId, setLocalConversationId] = useState<Id<"conversations"> | null>(null);
+  const conversationId = localConversationId ?? agentConversation?._id ?? null;
 
-  useEffect(() => {
-    if (agentConversation) {
-      setConversationId(agentConversation._id);
-    }
-  }, [agentConversation]);
-
-  useEffect(() => {
-    if (agent && !initialized.current) {
-      setName(agent.name);
-      setPrompt(agent.prompt ?? "");
-      setHours(agent.hours ?? 0);
-      setCron(agent.cron ?? "");
-      setGuardrails(agent.guardrails ?? "");
-      setSelectedTools(agent.tools);
-      initialized.current = true;
-    }
-  }, [agent]);
+  if (agent && initializedAgentId === null) {
+    setInitializedAgentId(agent._id);
+    setName(agent.name);
+    setPrompt(agent.prompt ?? "");
+    setHours(agent.hours ?? 0);
+    setCron(agent.cron ?? "");
+    setGuardrails(agent.guardrails ?? "");
+    setSelectedTools(agent.tools);
+  }
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -198,7 +191,7 @@ export default function AgentDetailPage({
                 title: agent.name,
                 agentId: id as Id<"agents">,
               });
-              setConversationId(newId);
+              setLocalConversationId(newId);
             }}
           />
         </div>

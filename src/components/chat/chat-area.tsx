@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import { MessageBubble } from "./message-bubble";
@@ -17,7 +17,7 @@ export function ChatArea({ conversationId, onNewChat, agentId }: ChatAreaProps) 
     useChatStream(conversationId, agentId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const pendingMessageRef = useRef<string | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -42,17 +42,17 @@ export function ChatArea({ conversationId, onNewChat, agentId }: ChatAreaProps) 
 
   // When conversation is created and we have a pending message, send it
   useEffect(() => {
-    if (conversationId && pendingMessage) {
-      const msg = pendingMessage;
-      setPendingMessage(null);
+    if (conversationId && pendingMessageRef.current) {
+      const msg = pendingMessageRef.current;
+      pendingMessageRef.current = null;
       sendMessage(msg);
     }
-  }, [conversationId, pendingMessage, sendMessage]);
+  }, [conversationId, sendMessage]);
 
   const handleSend = async (text: string) => {
     if (!conversationId) {
       // Create conversation first, then send once it's ready
-      setPendingMessage(text);
+      pendingMessageRef.current = text;
       await onNewChat();
       return;
     }
