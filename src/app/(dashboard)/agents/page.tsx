@@ -75,7 +75,7 @@ export default function AgentsPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  {agent.hours > 0 ? `Every ${agent.hours}h` : agent.cron || "Not set"}
+                  {(agent.hours ?? 0) > 0 ? `Every ${agent.hours}h` : agent.cron || "Not set"}
                 </td>
                 <td className="px-4 py-3">
                   {agent.lastRun
