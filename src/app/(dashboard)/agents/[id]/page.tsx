@@ -55,7 +55,7 @@ export default function AgentDetailPage({
     if (agent && !initialized.current) {
       setName(agent.name);
       setPrompt(agent.prompt ?? "");
-      setHours(agent.hours);
+      setHours(agent.hours ?? 0);
       setCron(agent.cron ?? "");
       setGuardrails(agent.guardrails ?? "");
       setSelectedTools(agent.tools);
