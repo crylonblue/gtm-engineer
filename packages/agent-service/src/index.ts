@@ -137,7 +137,10 @@ app.post("/api/stream", async (c) => {
       console.error("[stream] Failed to load agent config:", err);
     }
   } else {
-    console.log("[stream] No agentId provided, using default prompt with no tools");
+    // No agent specified — enable all tools by default
+    const allTools = getAllTools();
+    agentTools = toAgentTools(allTools);
+    console.log(`[stream] No agentId provided, using all ${agentTools.length} tools`);
   }
 
   // Create pi-agent-core Agent with tools
