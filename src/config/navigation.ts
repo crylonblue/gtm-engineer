@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Bot,
+  HardDrive,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,5 +21,10 @@ export const navItems: NavItem[] = [
     title: "Agents",
     href: "/agents",
     icon: Bot,
+  },
+  {
+    title: "Storage",
+    href: "/storage",
+    icon: HardDrive,
   },
 ];

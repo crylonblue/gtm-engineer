@@ -6,7 +6,7 @@ import { getModel } from "@mariozechner/pi-ai";
 import type { UserMessage, AssistantMessage as PiAssistantMessage } from "@mariozechner/pi-ai";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { runAgent } from "./agent/runner.js";
-import { listObjects } from "./storage/r2.js";
+import { listObjects, getJson, getText } from "./storage/r2.js";
 import { getToolMetadata, getAllTools } from "./tools/index.js";
 import { toAgentTools } from "./tools/bridge.js";
 import { getAgent } from "./convex/client.js";
@@ -39,6 +39,34 @@ app.get("/api/runs/:runId/artifacts", async (c) => {
   try {
     const keys = await listObjects(`runs/${runId}/`);
     return c.json({ runId, artifacts: keys });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+});
+
+// Storage browsing API
+app.get("/api/storage/list", async (c) => {
+  const prefix = c.req.query("prefix") ?? "";
+  try {
+    const keys = await listObjects(prefix);
+    return c.json({ keys });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+});
+
+app.get("/api/storage/get", async (c) => {
+  const key = c.req.query("key");
+  if (!key) {
+    return c.json({ error: "key query parameter is required" }, 400);
+  }
+  try {
+    const jsonData = await getJson(key);
+    if (jsonData !== null) {
+      return c.json({ key, content: jsonData, format: "json" });
+    }
+    const text = await getText(key);
+    return c.json({ key, content: text, format: "text" });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }

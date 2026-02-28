@@ -6,6 +6,7 @@ import "./hubspot/index.js";
 import "./prospeo/index.js";
 import "./leads/index.js";
 import "./lemlist/index.js";
+import "./storage/index.js";
 
 // Re-export registry functions and types
 export {
