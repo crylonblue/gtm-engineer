@@ -20,16 +20,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-const AVAILABLE_TOOLS = [
-  "createAutomation",
-  "createCampaign",
-  "createDraftPost",
-  "createKnowledgeSource",
-  "enrollLeads",
-  "getCampaignMessages",
-  "getCampaignStats",
-  "getContentAnalytics",
-];
+const AGENT_URL =
+  process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
+
+interface ToolInfo {
+  name: string;
+  description: string;
+  provider: string;
+  category: string;
+}
+
+function useAvailableTools() {
+  const [tools, setTools] = useState<ToolInfo[]>([]);
+
+  useEffect(() => {
+    fetch(`${AGENT_URL}/api/tools`)
+      .then((res) => res.json())
+      .then((data: ToolInfo[]) => setTools(data))
+      .catch((err) => console.error("Failed to fetch tools:", err));
+  }, []);
+
+  return tools;
+}
 
 export default function AgentDetailPage({
   params,
@@ -286,6 +298,8 @@ function ToolDropdown({
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const availableTools = useAvailableTools();
+  const toolNames = availableTools.map((t) => t.name);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -297,11 +311,11 @@ function ToolDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filtered = AVAILABLE_TOOLS.filter((t) =>
-    t.toLowerCase().includes(filter.toLowerCase())
+  const filtered = availableTools.filter((t) =>
+    t.name.toLowerCase().includes(filter.toLowerCase())
   );
 
-  const allSelected = AVAILABLE_TOOLS.every((t) =>
+  const allSelected = toolNames.length > 0 && toolNames.every((t) =>
     selectedTools.includes(t)
   );
 
@@ -313,7 +327,7 @@ function ToolDropdown({
   }
 
   function toggleAll() {
-    setSelectedTools(allSelected ? [] : [...AVAILABLE_TOOLS]);
+    setSelectedTools(allSelected ? [] : [...toolNames]);
   }
 
   const label = allSelected
@@ -354,7 +368,7 @@ function ToolDropdown({
               />
             </div>
             <div className="max-h-64 overflow-y-auto py-1">
-              {filter === "" && (
+              {filter === "" && toolNames.length > 0 && (
                 <label className="flex cursor-pointer items-center gap-3 px-3 py-1.5 text-sm hover:bg-accent/50">
                   <input
                     type="checkbox"
@@ -367,16 +381,18 @@ function ToolDropdown({
               )}
               {filtered.map((tool) => (
                 <label
-                  key={tool}
+                  key={tool.name}
                   className="flex cursor-pointer items-center gap-3 px-3 py-1.5 text-sm hover:bg-accent/50"
+                  title={tool.description}
                 >
                   <input
                     type="checkbox"
-                    checked={selectedTools.includes(tool)}
-                    onChange={() => toggleTool(tool)}
+                    checked={selectedTools.includes(tool.name)}
+                    onChange={() => toggleTool(tool.name)}
                     className="size-4"
                   />
-                  {tool}
+                  <span>{tool.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{tool.provider}</span>
                 </label>
               ))}
             </div>

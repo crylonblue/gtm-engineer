@@ -22,16 +22,7 @@ export default function AgentsPage() {
       name: "Untitled automation",
       status: "paused",
       hours: 2,
-      tools: [
-        "createAutomation",
-        "createCampaign",
-        "createDraftPost",
-        "createKnowledgeSource",
-        "enrollLeads",
-        "getCampaignMessages",
-        "getCampaignStats",
-        "getContentAnalytics",
-      ],
+      tools: [],
     });
     router.push(`/agents/${id}`);
   };
