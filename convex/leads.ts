@@ -88,6 +88,14 @@ export const remove = mutation({
   },
 });
 
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const leads = await ctx.db.query("leads").collect();
+    return leads.length;
+  },
+});
+
 export const list = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {

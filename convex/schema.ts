@@ -40,7 +40,9 @@ export default defineSchema({
     processed: v.optional(v.number()),
     failed: v.optional(v.number()),
     skipped: v.optional(v.number()),
-  }).index("by_agent", ["agentId"]),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_startedAt", ["startedAt"]),
   workItems: defineTable({
     runId: v.id("runs"),
     itemKey: v.string(),
