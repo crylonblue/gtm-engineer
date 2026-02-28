@@ -170,6 +170,7 @@ app.post("/api/stream", async (c) => {
     try {
       // Subscribe to agent events and forward text deltas + structured tool events
       piAgent.subscribe((event) => {
+        console.log(`[stream] event: ${event.type}`);
         if (event.type === "message_update") {
           const ae = event.assistantMessageEvent;
           if (ae.type === "text_delta") {
@@ -204,13 +205,16 @@ app.post("/api/stream", async (c) => {
       });
 
       // Run the agent with the user's message
+      console.log(`[stream] calling piAgent.prompt with: "${lastMsg.content.slice(0, 100)}"`);
       await piAgent.prompt(lastMsg.content);
+      console.log(`[stream] prompt returned, waiting for idle...`);
       await piAgent.waitForIdle();
+      console.log(`[stream] agent idle, closing stream. messages=${piAgent.state.messages.length} error=${piAgent.state.error}`);
 
       await stream.write("data: [DONE]\n\n");
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error("Stream error:", errMsg);
+      console.error("[stream] Stream error:", errMsg);
       const payload = JSON.stringify({
         type: "error",
         error: { message: errMsg },
