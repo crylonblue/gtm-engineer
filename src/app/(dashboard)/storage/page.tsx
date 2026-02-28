@@ -2,10 +2,9 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, File, FileText, FolderOpen, Search } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { RefreshCw, File, FileText, Folder, FolderOpen, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { FileViewer } from "@/components/storage/file-viewer";
@@ -23,8 +22,47 @@ function getFileTypeBadge(key: string) {
   return null;
 }
 
+interface FolderEntry {
+  type: "folder";
+  name: string;
+}
+
+interface FileEntry {
+  type: "file";
+  name: string;
+  fullKey: string;
+}
+
+type Entry = FolderEntry | FileEntry;
+
+function deriveEntries(keys: string[], currentPath: string): Entry[] {
+  const folders = new Set<string>();
+  const files: FileEntry[] = [];
+
+  for (const key of keys) {
+    if (!key.startsWith(currentPath)) continue;
+    const remainder = key.slice(currentPath.length);
+    if (!remainder) continue;
+
+    const slashIndex = remainder.indexOf("/");
+    if (slashIndex !== -1) {
+      folders.add(remainder.slice(0, slashIndex));
+    } else {
+      files.push({ type: "file", name: remainder, fullKey: key });
+    }
+  }
+
+  const folderEntries: FolderEntry[] = [...folders]
+    .sort()
+    .map((name) => ({ type: "folder", name }));
+
+  files.sort((a, b) => a.name.localeCompare(b.name));
+
+  return [...folderEntries, ...files];
+}
+
 export default function StoragePage() {
-  const [prefix, setPrefix] = useState("");
+  const [currentPath, setCurrentPath] = useState("");
   const [keys, setKeys] = useState<string[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -35,7 +73,7 @@ export default function StoragePage() {
     setLoadingKeys(true);
     try {
       const res = await fetch(
-        `/api/storage/list?prefix=${encodeURIComponent(prefix)}`,
+        `/api/storage/list?prefix=${encodeURIComponent(currentPath)}`,
       );
       const data = await res.json();
       setKeys(data.keys ?? []);
@@ -45,11 +83,35 @@ export default function StoragePage() {
     } finally {
       setLoadingKeys(false);
     }
-  }, [prefix]);
+  }, [currentPath]);
 
   useEffect(() => {
     fetchKeys();
   }, [fetchKeys]);
+
+  const entries = useMemo(() => deriveEntries(keys, currentPath), [keys, currentPath]);
+
+  const breadcrumbSegments = useMemo(() => {
+    if (!currentPath) return [];
+    return currentPath.split("/").filter(Boolean);
+  }, [currentPath]);
+
+  const navigateToFolder = useCallback((folderName: string) => {
+    setCurrentPath((prev) => prev + folderName + "/");
+    setSelectedKey(null);
+    setFileContent(null);
+  }, []);
+
+  const navigateToBreadcrumb = useCallback((index: number) => {
+    if (index < 0) {
+      setCurrentPath("");
+    } else {
+      const segments = currentPath.split("/").filter(Boolean);
+      setCurrentPath(segments.slice(0, index + 1).join("/") + "/");
+    }
+    setSelectedKey(null);
+    setFileContent(null);
+  }, [currentPath]);
 
   const fetchFile = useCallback(async (key: string) => {
     setSelectedKey(key);
@@ -69,6 +131,9 @@ export default function StoragePage() {
     }
   }, []);
 
+  const fileCount = useMemo(() => entries.filter((e) => e.type === "file").length, [entries]);
+  const folderCount = useMemo(() => entries.filter((e) => e.type === "folder").length, [entries]);
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between border-b px-6 py-4">
@@ -76,7 +141,7 @@ export default function StoragePage() {
           <FolderOpen size={20} className="text-muted-foreground" />
           <h1 className="text-lg font-semibold">Storage</h1>
           <Badge variant="secondary" className="text-xs">
-            {keys.length} files
+            {folderCount > 0 && `${folderCount} folders, `}{fileCount} files
           </Badge>
         </div>
         <Button variant="outline" size="sm" onClick={fetchKeys} disabled={loadingKeys}>
@@ -88,15 +153,28 @@ export default function StoragePage() {
       <div className="flex flex-1 min-h-0">
         {/* Left: file list */}
         <div className="w-80 border-r flex flex-col shrink-0">
+          {/* Breadcrumb */}
           <div className="p-3 border-b">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-2.5 text-muted-foreground" />
-              <Input
-                placeholder="Filter by prefix..."
-                value={prefix}
-                onChange={(e) => setPrefix(e.target.value)}
-                className="pl-8 h-9 text-sm"
-              />
+            <div className="flex items-center gap-1 text-sm flex-wrap">
+              <button
+                type="button"
+                onClick={() => navigateToBreadcrumb(-1)}
+                className={`hover:underline ${currentPath === "" ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+              >
+                root
+              </button>
+              {breadcrumbSegments.map((segment, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  <ChevronRight size={12} className="text-muted-foreground shrink-0" />
+                  <button
+                    type="button"
+                    onClick={() => navigateToBreadcrumb(i)}
+                    className={`hover:underline truncate max-w-[120px] ${i === breadcrumbSegments.length - 1 ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+                  >
+                    {segment}
+                  </button>
+                </span>
+              ))}
             </div>
           </div>
 
@@ -107,28 +185,42 @@ export default function StoragePage() {
                   <Skeleton key={i} className="h-8 w-full" />
                 ))}
               </div>
-            ) : keys.length === 0 ? (
+            ) : entries.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
-                No files found
+                {currentPath ? "Empty folder" : "No files found"}
               </div>
             ) : (
               <div className="p-1">
-                {keys.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => fetchFile(key)}
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md text-left hover:bg-muted/50 transition-colors ${
-                      selectedKey === key ? "bg-muted" : ""
-                    }`}
-                  >
-                    {getFileIcon(key)}
-                    <span className="truncate flex-1 font-mono text-xs">
-                      {key}
-                    </span>
-                    {getFileTypeBadge(key)}
-                  </button>
-                ))}
+                {entries.map((entry) =>
+                  entry.type === "folder" ? (
+                    <button
+                      key={`folder:${entry.name}`}
+                      type="button"
+                      onClick={() => navigateToFolder(entry.name)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <Folder size={14} className="text-yellow-500 shrink-0" />
+                      <span className="truncate flex-1 font-mono text-xs">
+                        {entry.name}/
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      key={entry.fullKey}
+                      type="button"
+                      onClick={() => fetchFile(entry.fullKey)}
+                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md text-left hover:bg-muted/50 transition-colors ${
+                        selectedKey === entry.fullKey ? "bg-muted" : ""
+                      }`}
+                    >
+                      {getFileIcon(entry.name)}
+                      <span className="truncate flex-1 font-mono text-xs">
+                        {entry.name}
+                      </span>
+                      {getFileTypeBadge(entry.name)}
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -152,7 +244,7 @@ export default function StoragePage() {
                 <span className="font-mono text-sm font-medium">{selectedKey}</span>
                 {getFileTypeBadge(selectedKey)}
               </div>
-              <FileViewer content={fileContent} maxHeight="calc(100vh - 250px)" />
+              <FileViewer content={fileContent} fileName={selectedKey} maxHeight="calc(100vh - 250px)" />
             </div>
           )}
         </div>

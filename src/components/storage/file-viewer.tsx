@@ -36,13 +36,14 @@ function tryParseJsonArray(content: unknown): Record<string, unknown>[] | null {
 
 interface FileViewerProps {
   content: unknown;
+  fileName?: string;
   maxHeight?: string;
 }
 
-export function FileViewer({ content, maxHeight }: FileViewerProps) {
+export function FileViewer({ content, fileName, maxHeight }: FileViewerProps) {
   // String content — check CSV first, then JSON array
   if (typeof content === "string") {
-    if (looksLikeCsv(content)) {
+    if (fileName?.endsWith(".csv") || looksLikeCsv(content)) {
       return <CsvTable csv={content} maxHeight={maxHeight} />;
     }
     const arr = tryParseJsonArray(content);
