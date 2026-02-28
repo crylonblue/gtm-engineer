@@ -60,6 +60,8 @@ app.post("/api/stream", async (c) => {
     messages: Array<{ role: "user" | "assistant"; content: string }>;
   }>();
 
+  console.log(`[stream] received request: agentId=${body.agentId} messages=${body.messages?.length} model=${body.model}`);
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return c.json({ error: "ANTHROPIC_API_KEY not set" }, 500);
