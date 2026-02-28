@@ -5,6 +5,7 @@ import "./unipile/index.js";
 import "./hubspot/index.js";
 import "./prospeo/index.js";
 import "./leads/index.js";
+import "./lemlist/index.js";
 
 // Re-export registry functions and types
 export {
