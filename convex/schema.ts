@@ -18,6 +18,54 @@ export default defineSchema({
     agentId: v.optional(v.id("agents")),
     lastMessageAt: v.number(),
   }).index("by_lastMessage", ["lastMessageAt"]),
+  runs: defineTable({
+    agentId: v.id("agents"),
+    status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),
+    phase: v.string(),
+    trigger: v.union(v.literal("schedule"), v.literal("manual")),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    tasks: v.number(),
+    discovered: v.number(),
+    processed: v.number(),
+    failed: v.number(),
+    skipped: v.number(),
+  }).index("by_agent", ["agentId"]),
+  workItems: defineTable({
+    runId: v.id("runs"),
+    itemKey: v.string(),
+    itemType: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("dead_letter"),
+      v.literal("skipped")
+    ),
+  }).index("by_run", ["runId"]),
+  runMessages: defineTable({
+    runId: v.id("runs"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    toolCalls: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          args: v.string(),
+          status: v.union(
+            v.literal("pending"),
+            v.literal("running"),
+            v.literal("complete"),
+            v.literal("error")
+          ),
+          result: v.optional(v.string()),
+        })
+      )
+    ),
+    timestamp: v.number(),
+  }).index("by_run", ["runId"]),
   messages: defineTable({
     conversationId: v.id("conversations"),
     role: v.union(v.literal("user"), v.literal("assistant")),

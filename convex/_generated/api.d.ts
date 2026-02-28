@@ -11,6 +11,9 @@
 import type * as agents from "../agents.js";
 import type * as conversations from "../conversations.js";
 import type * as messages from "../messages.js";
+import type * as runMessages from "../runMessages.js";
+import type * as runs from "../runs.js";
+import type * as workItems from "../workItems.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +25,9 @@ declare const fullApi: ApiFromModules<{
   agents: typeof agents;
   conversations: typeof conversations;
   messages: typeof messages;
+  runMessages: typeof runMessages;
+  runs: typeof runs;
+  workItems: typeof workItems;
 }>;
 
 /**

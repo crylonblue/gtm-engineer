@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Search, ChevronDown, Trash2 } from "lucide-react";
+import { RunLogs } from "@/components/runs/run-logs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ export default function AgentDetailPage({
   const [cron, setCron] = useState("");
   const [guardrails, setGuardrails] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"configure" | "runs">("configure");
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -115,14 +117,27 @@ export default function AgentDetailPage({
 
       {/* Tab row */}
       <div className="flex items-center gap-1">
-        <Button variant="default" size="sm">
+        <Button
+          variant={activeTab === "configure" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("configure")}
+        >
           Configure
         </Button>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant={activeTab === "runs" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("runs")}
+        >
           Run &amp; Logs
         </Button>
       </div>
 
+      {activeTab === "runs" && (
+        <RunLogs agentId={id as Id<"agents">} />
+      )}
+
+      {activeTab === "configure" && <>
       {/* Configuration header */}
       <div className="flex items-center justify-between">
         <span className="font-bold">Configuration</span>
@@ -234,6 +249,7 @@ export default function AgentDetailPage({
           />
         </CardContent>
       </Card>
+      </>}
     </div>
   );
 }
