@@ -1,4 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
+import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { getAgent, createRun, updateRun, addRunMessage, updateAgentLastRun } from "../convex/client.js";
 import { buildSystemPrompt } from "./prompt.js";
@@ -71,7 +72,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     let toolUseCount = 0;
 
     // Subscribe to events for logging & Convex persistence
-    piAgent.subscribe((event) => {
+    piAgent.subscribe((event: AgentEvent) => {
       switch (event.type) {
         case "message_end": {
           messageCount++;
