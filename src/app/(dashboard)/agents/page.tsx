@@ -108,7 +108,23 @@ export default function AgentsPage() {
                         Pause
                       </Button>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        fetch(
+                          `${process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001"}/api/run`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              agentId: agent._id,
+                              trigger: "manual",
+                            }),
+                          }
+                        );
+                      }}
+                    >
                       <RefreshCw />
                       Run
                     </Button>

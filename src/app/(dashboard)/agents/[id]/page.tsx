@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { Search, ChevronDown, Trash2 } from "lucide-react";
+import { Search, ChevronDown, Trash2, RefreshCw } from "lucide-react";
 import { RunLogs } from "@/components/runs/run-logs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,27 @@ export default function AgentDetailPage({
         <span>
           Last run: {agent.lastRun ? new Date(agent.lastRun).toLocaleString() : "Never"}
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetch(
+                `${process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001"}/api/run`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    agentId: id,
+                    trigger: "manual",
+                  }),
+                }
+              );
+            }}
+          >
+            <RefreshCw className="size-4" />
+            Run Now
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <Trash2 className="size-4" />
             Delete
