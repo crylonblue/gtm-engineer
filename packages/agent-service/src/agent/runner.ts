@@ -7,7 +7,7 @@ import { getAllTools, getToolMetadata } from "../tools/index.js";
 import { toAgentTools } from "../tools/bridge.js";
 import { uploadJson, isR2Enabled } from "../storage/r2.js";
 
-export async function runAgent(agentId: string, trigger: "manual" | "schedule") {
+export async function runAgent(agentId: string, trigger: "manual" | "schedule" | "heartbeat") {
   let runId: string | undefined;
 
   try {
@@ -49,7 +49,8 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
     }
 
     const toolMeta = getToolMetadata(agentTools.length < allTools.length ? agentToolNames : undefined);
-    const taskPrompt = trigger === "schedule"
+    const useHeartbeat = trigger === "schedule" || trigger === "heartbeat";
+    const taskPrompt = useHeartbeat
       ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
       : (agent.prompt ?? "");
     const systemPrompt = buildSystemPrompt(agent.name, taskPrompt, agent.guardrails, toolMeta);
@@ -111,7 +112,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule") 
 
     // Run the agent
     console.log(`[runner] Starting agent prompt...`);
-    const kickoffMessage = trigger === "schedule"
+    const kickoffMessage = useHeartbeat
       ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
       : `Execute your task. Trigger: ${trigger}`;
     await piAgent.prompt(kickoffMessage);

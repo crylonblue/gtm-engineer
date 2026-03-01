@@ -24,7 +24,6 @@ async function execute(params: Params): Promise<ToolResult> {
   const accountId = getUnipileAccountId();
 
   const body: Record<string, unknown> = {
-    account_id: accountId,
     api: params.api,
     category: "companies",
     keywords: params.keywords,
@@ -35,7 +34,10 @@ async function execute(params: Params): Promise<ToolResult> {
     body.url = params.url;
   }
 
-  const data = await client.post("/api/v1/linkedin/search", body);
+  const data = await client.post(
+    `/api/v1/linkedin/search?account_id=${encodeURIComponent(accountId)}`,
+    body
+  );
   return { success: true, data };
 }
 

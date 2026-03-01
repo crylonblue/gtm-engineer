@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { RefreshCw, Play, Pause, Plus, Trash2 } from "lucide-react";
@@ -10,12 +11,16 @@ import { api } from "../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+const AGENT_URL =
+  process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
+
 export default function AgentsPage() {
   const router = useRouter();
   const agents = useQuery(api.agents.list);
   const create = useMutation(api.agents.create);
   const update = useMutation(api.agents.update);
   const remove = useMutation(api.agents.remove);
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
 
   const handleCreate = async () => {
     const id = await create({
@@ -102,22 +107,37 @@ export default function AgentsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        fetch(
-                          `${process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001"}/api/run`,
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              agentId: agent._id,
-                              trigger: "manual",
-                            }),
-                          }
-                        );
+                      disabled={runningIds.has(agent._id)}
+                      onClick={async () => {
+                        setRunningIds((prev) => new Set(prev).add(agent._id));
+                        try {
+                          const res = await fetch(
+                            `${AGENT_URL}/api/run`,
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                agentId: agent._id,
+                                trigger: "heartbeat",
+                              }),
+                            }
+                          );
+                          if (!res.ok) console.error("Run failed:", await res.text());
+                        } catch (err) {
+                          console.error("Run failed:", err);
+                        } finally {
+                          setTimeout(() => {
+                            setRunningIds((prev) => {
+                              const next = new Set(prev);
+                              next.delete(agent._id);
+                              return next;
+                            });
+                          }, 3000);
+                        }
                       }}
                     >
-                      <RefreshCw />
-                      Run
+                      <RefreshCw className={runningIds.has(agent._id) ? "animate-spin" : ""} />
+                      {runningIds.has(agent._id) ? "Running..." : "Run"}
                     </Button>
                     <Button
                       variant="outline"

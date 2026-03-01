@@ -63,6 +63,7 @@ export default function AgentDetailPage({
   const [guardrails, setGuardrails] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"chat" | "configure" | "runs">("chat");
+  const [isRunning, setIsRunning] = useState(false);
   const [initializedAgentId, setInitializedAgentId] = useState<string | null>(null);
 
   // Chat: find or create a conversation for this agent
@@ -134,22 +135,31 @@ export default function AgentDetailPage({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              fetch(
-                `${process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001"}/api/run`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    agentId: id,
-                    trigger: "manual",
-                  }),
-                }
-              );
+            disabled={isRunning}
+            onClick={async () => {
+              setIsRunning(true);
+              try {
+                const res = await fetch(
+                  `${AGENT_URL}/api/run`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      agentId: id,
+                      trigger: "heartbeat",
+                    }),
+                  }
+                );
+                if (!res.ok) console.error("Run failed:", await res.text());
+              } catch (err) {
+                console.error("Run failed:", err);
+              } finally {
+                setTimeout(() => setIsRunning(false), 3000);
+              }
             }}
           >
-            <RefreshCw className="size-4" />
-            Run Now
+            <RefreshCw className={`size-4 ${isRunning ? "animate-spin" : ""}`} />
+            {isRunning ? "Running..." : "Run Now"}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <Trash2 className="size-4" />

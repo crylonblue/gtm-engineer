@@ -20,7 +20,7 @@ app.use("/*", cors());
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 app.post("/api/run", async (c) => {
-  const body = await c.req.json<{ agentId: string; trigger?: "manual" | "schedule" }>();
+  const body = await c.req.json<{ agentId: string; trigger?: "manual" | "schedule" | "heartbeat" }>();
   const { agentId, trigger = "manual" } = body;
 
   if (!agentId) {

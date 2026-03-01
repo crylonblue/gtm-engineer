@@ -34,7 +34,7 @@ export const get = query({
 export const create = mutation({
   args: {
     agentId: v.union(v.id("agents"), v.string()),
-    trigger: v.union(v.literal("schedule"), v.literal("manual")),
+    trigger: v.union(v.literal("schedule"), v.literal("manual"), v.literal("heartbeat")),
     status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),
     startedAt: v.number(),
   },

@@ -17,7 +17,7 @@ function timeAgo(ts: number): string {
 type Run = {
   status: "running" | "completed" | "failed";
   phase?: string;
-  trigger: "schedule" | "manual";
+  trigger: "schedule" | "manual" | "heartbeat";
   startedAt: number;
   endedAt?: number;
   tasks?: number;

@@ -33,7 +33,7 @@ export async function getAgent(agentId: string) {
 
 export async function createRun(args: {
   agentId: string;
-  trigger: "manual" | "schedule";
+  trigger: "manual" | "schedule" | "heartbeat";
   status: "running" | "completed" | "failed";
   startedAt: number;
 }): Promise<string> {

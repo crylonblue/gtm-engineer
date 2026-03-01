@@ -28,7 +28,7 @@ export default defineSchema({
     agentId: v.union(v.id("agents"), v.string()),
     status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),
     phase: v.optional(v.string()),
-    trigger: v.union(v.literal("schedule"), v.literal("manual")),
+    trigger: v.union(v.literal("schedule"), v.literal("manual"), v.literal("heartbeat")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     endedAt: v.optional(v.number()),
