@@ -1,5 +1,6 @@
 "use client";
 
+import { Activity } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { MessageContent } from "@/components/chat/message-content";
@@ -26,6 +27,18 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
+  // Heartbeat indicator
+  if (message.role === "user" && message.content === "__heartbeat__") {
+    return (
+      <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+        <div className="flex-1 border-t border-border" />
+        <Activity size={12} className="text-muted-foreground" />
+        <span>Heartbeat</span>
+        <div className="flex-1 border-t border-border" />
+      </div>
+    );
+  }
+
   if (message.role === "user") {
     return (
       <div className="flex justify-end">

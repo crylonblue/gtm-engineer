@@ -179,8 +179,12 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
       ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
       : `Execute your task. Trigger: ${trigger}`;
 
-    // Save the user kickoff message to the conversation
-    await addConversationMessage(conversationId, "user", kickoffMessage);
+    // Save a heartbeat marker to the conversation (the full prompt goes only to the LLM)
+    if (useHeartbeat) {
+      await addConversationMessage(conversationId, "user", "__heartbeat__");
+    } else {
+      await addConversationMessage(conversationId, "user", kickoffMessage);
+    }
 
     await piAgent.prompt(kickoffMessage);
     await piAgent.waitForIdle();
