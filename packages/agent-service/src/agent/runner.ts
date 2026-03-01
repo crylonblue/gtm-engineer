@@ -108,33 +108,58 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
     let messageCount = 0;
     let toolUseCount = 0;
 
-    // Subscribe to events for logging & Convex persistence
+    // Accumulate assistant text and tool calls for a single consolidated message
+    let accumulatedText = "";
+    const toolCalls: Array<{
+      id: string;
+      name: string;
+      args: string;
+      status: "pending" | "running" | "complete" | "error";
+      result?: string;
+    }> = [];
+
+    // Subscribe to events for logging & accumulation
     piAgent.subscribe((event: AgentEvent) => {
       switch (event.type) {
         case "message_end": {
           messageCount++;
           const msg = event.message;
-          if ("role" in msg && (msg.role === "user" || msg.role === "assistant")) {
-            let content: string;
-            if (msg.role === "assistant") {
-              const blocks = Array.isArray(msg.content) ? msg.content : [];
-              content = blocks
-                .filter((b): b is { type: "text"; text: string } => "type" in b && b.type === "text")
-                .map((b) => b.text)
-                .join("");
-            } else {
-              content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+          if ("role" in msg && msg.role === "assistant") {
+            const blocks = Array.isArray(msg.content) ? msg.content : [];
+            // Accumulate text blocks
+            const text = blocks
+              .filter((b): b is { type: "text"; text: string } => "type" in b && b.type === "text")
+              .map((b) => b.text)
+              .join("");
+            if (text) accumulatedText += (accumulatedText ? "\n\n" : "") + text;
+            // Collect tool call entries from this message
+            for (const block of blocks) {
+              if ("type" in block && block.type === "toolCall") {
+                const tc = block as { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> };
+                toolCalls.push({
+                  id: tc.id,
+                  name: tc.name,
+                  args: JSON.stringify(tc.arguments),
+                  status: "pending",
+                });
+              }
             }
-            addConversationMessage(conversationId, msg.role, content).catch(console.error);
           }
           break;
         }
         case "tool_execution_start": {
           toolUseCount++;
           console.log(`  Tool: ${event.toolName} (${event.toolCallId})`);
+          const tc = toolCalls.find((t) => t.id === event.toolCallId);
+          if (tc) tc.status = "running";
           break;
         }
         case "tool_execution_end": {
+          const tc = toolCalls.find((t) => t.id === event.toolCallId);
+          if (tc) {
+            tc.status = event.isError ? "error" : "complete";
+            tc.result = typeof event.result === "string" ? event.result : JSON.stringify(event.result ?? {});
+          }
           if (isR2Enabled()) {
             uploadJson(`runs/${runId}/tools/${toolUseCount}-${event.toolName}.json`, {
               toolCallId: event.toolCallId,
@@ -153,9 +178,23 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
     const kickoffMessage = useHeartbeat
       ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
       : `Execute your task. Trigger: ${trigger}`;
+
+    // Save the user kickoff message to the conversation
+    await addConversationMessage(conversationId, "user", kickoffMessage);
+
     await piAgent.prompt(kickoffMessage);
     await piAgent.waitForIdle();
     console.log(`[runner] Agent finished. messages=${messageCount} tools=${toolUseCount}`);
+
+    // Save one consolidated assistant message with content + tool calls
+    if (accumulatedText || toolCalls.length > 0) {
+      await addConversationMessage(
+        conversationId,
+        "assistant",
+        accumulatedText,
+        toolCalls.length > 0 ? toolCalls : undefined,
+      );
+    }
 
     // Update run as completed
     console.log(`[runner] Updating run ${runId} as completed...`);

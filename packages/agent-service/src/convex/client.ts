@@ -112,10 +112,18 @@ export async function addConversationMessage(
   conversationId: string,
   role: "user" | "assistant",
   content: string,
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    args: string;
+    status: "pending" | "running" | "complete" | "error";
+    result?: string;
+  }>,
 ): Promise<string> {
   return await getClient().mutation(anyApi.messages.save, {
     conversationId,
     role,
     content,
+    ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
   }) as string;
 }
