@@ -1,7 +1,8 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
-import { getAgent, createRun, updateRun, addRunMessage, updateAgentLastRun } from "../convex/client.js";
+import type { UserMessage, AssistantMessage as PiAssistantMessage } from "@mariozechner/pi-ai";
+import { getAgent, createRun, updateRun, updateAgentLastRun, getOrCreateConversation, getConversationMessages, addConversationMessage } from "../convex/client.js";
 import { buildSystemPrompt, DEFAULT_HEARTBEAT_PROMPT } from "./prompt.js";
 import { getAllTools, getToolMetadata } from "../tools/index.js";
 import { toAgentTools } from "../tools/bridge.js";
@@ -58,7 +59,33 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-    const model = getModel("anthropic", "claude-sonnet-4-20250514");
+    const modelId = "claude-sonnet-4-20250514";
+    const model = getModel("anthropic", modelId);
+
+    // ── Load conversation history ──────────────────────────────────
+    const conversationId = await getOrCreateConversation(agent._id, agent.name);
+    console.log(`[runner] Using conversation ${conversationId}`);
+
+    const existingMessages = await getConversationMessages(conversationId);
+    const historyMessages = existingMessages.map((m) => {
+      if (m.role === "assistant") {
+        return {
+          role: "assistant" as const,
+          content: [{ type: "text" as const, text: m.content }],
+          api: "anthropic-messages" as const,
+          provider: "anthropic",
+          model: modelId,
+          usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+          stopReason: "stop" as const,
+          timestamp: Date.now(),
+        } satisfies PiAssistantMessage;
+      }
+      return {
+        role: "user" as const,
+        content: m.content,
+        timestamp: Date.now(),
+      } satisfies UserMessage;
+    });
 
     // Create pi-agent-core Agent with built-in retry & rate-limit handling
     const piAgent = new Agent({
@@ -72,6 +99,12 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
       maxRetryDelayMs: 120_000, // Wait up to 2 minutes for rate limit retries
     });
 
+    // Set conversation history so the agent has full context
+    if (historyMessages.length > 0) {
+      piAgent.replaceMessages(historyMessages);
+      console.log(`[runner] Loaded ${historyMessages.length} history messages`);
+    }
+
     let messageCount = 0;
     let toolUseCount = 0;
 
@@ -82,12 +115,17 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
           messageCount++;
           const msg = event.message;
           if ("role" in msg && (msg.role === "user" || msg.role === "assistant")) {
-            addRunMessage({
-              runId: runId!,
-              role: msg.role,
-              content: JSON.stringify("content" in msg ? msg.content : msg),
-              timestamp: Date.now(),
-            }).catch(console.error);
+            let content: string;
+            if (msg.role === "assistant") {
+              const blocks = Array.isArray(msg.content) ? msg.content : [];
+              content = blocks
+                .filter((b): b is { type: "text"; text: string } => "type" in b && b.type === "text")
+                .map((b) => b.text)
+                .join("");
+            } else {
+              content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+            }
+            addConversationMessage(conversationId, msg.role, content).catch(console.error);
           }
           break;
         }

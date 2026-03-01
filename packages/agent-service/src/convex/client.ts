@@ -70,3 +70,52 @@ export async function updateAgentLastRun(agentId: string, timestamp: number, las
 export async function listActiveAgents(): Promise<AgentDoc[]> {
   return await getClient().query(anyApi.agents.listActive, {}) as AgentDoc[];
 }
+
+// ── Conversation helpers ────────────────────────────────────────────
+
+export interface ConversationDoc {
+  _id: string;
+  title: string;
+  agentId?: string;
+  lastMessageAt: number;
+}
+
+export interface MessageDoc {
+  _id: string;
+  conversationId: string;
+  role: "user" | "assistant";
+  content: string;
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    args: string;
+    status: "pending" | "running" | "complete" | "error";
+    result?: string;
+  }>;
+  isStreaming?: boolean;
+}
+
+export async function getOrCreateConversation(agentId: string, agentName: string): Promise<string> {
+  const existing = await getClient().query(anyApi.conversations.getByAgent, { agentId }) as ConversationDoc | null;
+  if (existing) return existing._id;
+  return await getClient().mutation(anyApi.conversations.create, {
+    title: agentName,
+    agentId,
+  }) as string;
+}
+
+export async function getConversationMessages(conversationId: string): Promise<MessageDoc[]> {
+  return await getClient().query(anyApi.messages.list, { conversationId }) as MessageDoc[];
+}
+
+export async function addConversationMessage(
+  conversationId: string,
+  role: "user" | "assistant",
+  content: string,
+): Promise<string> {
+  return await getClient().mutation(anyApi.messages.save, {
+    conversationId,
+    role,
+    content,
+  }) as string;
+}
