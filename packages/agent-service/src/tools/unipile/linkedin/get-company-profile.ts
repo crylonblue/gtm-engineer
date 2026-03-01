@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolResult } from "../../types.js";
-import { getUnipileClient } from "../client.js";
+import { getUnipileClient, getUnipileAccountId } from "../client.js";
 
 const parameters = z.object({
   id: z.string().describe("LinkedIn company ID or vanity name"),
@@ -10,7 +10,10 @@ type Params = z.infer<typeof parameters>;
 
 async function execute(params: Params): Promise<ToolResult> {
   const client = getUnipileClient();
-  const data = await client.get(`/api/v1/linkedin/company/${encodeURIComponent(params.id)}`);
+  const accountId = getUnipileAccountId();
+  const data = await client.get(
+    `/api/v1/linkedin/company/${encodeURIComponent(params.id)}?account_id=${encodeURIComponent(accountId)}`
+  );
   return { success: true, data };
 }
 

@@ -11,9 +11,10 @@ type Params = z.infer<typeof parameters>;
 
 async function execute(params: Params): Promise<ToolResult> {
   const client = getUnipileClient();
-  const data = await client.post(`/api/v1/chats/${encodeURIComponent(params.chat_id)}/messages`, {
-    text: params.text,
-  });
+  const data = await client.post(
+    `/api/v1/chats/${encodeURIComponent(params.chat_id)}/messages`,
+    { text: params.text }
+  );
   return { success: true, data };
 }
 
