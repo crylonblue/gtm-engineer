@@ -14,7 +14,7 @@ async function execute(params: Params): Promise<ToolResult> {
   const client = getUnipileClient();
   const accountId = getUnipileAccountId();
   const path = `/api/v1/posts/${encodeURIComponent(params.post_id)}/comments?account_id=${encodeURIComponent(accountId)}`;
-  const data = await client.post(path, { text: params.text });
+  const data = await client.post(path, { account_id: accountId, text: params.text });
   console.log(`[sendComment] success:`, JSON.stringify(data).substring(0, 200));
   return { success: true, data };
 }
