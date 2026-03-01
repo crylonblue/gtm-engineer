@@ -222,26 +222,45 @@ export function CsvTable({ csv, onEdit, onChange, maxHeight = "400px" }: CsvTabl
                     }}
                   >
                     {isEditing ? (
-                      <input
-                        className="w-full bg-background border border-primary/50 ring-1 ring-primary/20 px-1 py-0.5 text-xs font-mono rounded-sm outline-none"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={commitEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitAndMove(1, 0); // move down
-                          } else if (e.key === "Tab") {
-                            e.preventDefault();
-                            commitAndMove(0, e.shiftKey ? -1 : 1);
-                          } else if (e.key === "Escape") {
-                            cancelEdit();
-                          }
-                        }}
-                        autoFocus
-                      />
+                      editValue.includes("\n") ? (
+                        <textarea
+                          className="w-full min-w-[200px] bg-background border border-primary/50 ring-1 ring-primary/20 px-1 py-0.5 text-xs font-mono rounded-sm outline-none resize-y"
+                          rows={Math.min(editValue.split("\n").length + 1, 8)}
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={commitEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === "Tab") {
+                              e.preventDefault();
+                              commitAndMove(0, e.shiftKey ? -1 : 1);
+                            } else if (e.key === "Escape") {
+                              cancelEdit();
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <input
+                          className="w-full bg-background border border-primary/50 ring-1 ring-primary/20 px-1 py-0.5 text-xs font-mono rounded-sm outline-none"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={commitEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              commitAndMove(1, 0); // move down
+                            } else if (e.key === "Tab") {
+                              e.preventDefault();
+                              commitAndMove(0, e.shiftKey ? -1 : 1);
+                            } else if (e.key === "Escape") {
+                              cancelEdit();
+                            }
+                          }}
+                          autoFocus
+                        />
+                      )
                     ) : (
-                      <span className={cell ? "" : "text-muted-foreground/40 italic"}>
+                      <span className={`${cell ? "whitespace-pre-wrap" : "text-muted-foreground/40 italic"}`}>
                         {cell || (editable ? "empty" : "")}
                       </span>
                     )}
