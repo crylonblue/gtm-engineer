@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { Search, ChevronDown, Trash2, RefreshCw } from "lucide-react";
+import { Search, ChevronDown, Trash2, HeartPulse } from "lucide-react";
 import { RunLogs } from "@/components/runs/run-logs";
 import { ChatArea } from "@/components/chat/chat-area";
 import { Badge } from "@/components/ui/badge";
@@ -158,8 +158,8 @@ export default function AgentDetailPage({
               }
             }}
           >
-            <RefreshCw className={`size-4 ${isRunning ? "animate-spin" : ""}`} />
-            {isRunning ? "Running..." : "Run Now"}
+            <HeartPulse className={`size-4 ${isRunning ? "animate-pulse" : ""}`} />
+            {isRunning ? "Running..." : "Heartbeat"}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <Trash2 className="size-4" />
