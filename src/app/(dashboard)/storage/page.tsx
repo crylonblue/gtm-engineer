@@ -131,6 +131,22 @@ export default function StoragePage() {
     }
   }, []);
 
+  const handleSave = useCallback(
+    async (csv: string) => {
+      if (!selectedKey) return;
+      const res = await fetch("/api/storage/put", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: selectedKey, content: csv }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to save");
+      }
+    },
+    [selectedKey],
+  );
+
   const fileCount = useMemo(() => entries.filter((e) => e.type === "file").length, [entries]);
   const folderCount = useMemo(() => entries.filter((e) => e.type === "folder").length, [entries]);
 
@@ -244,7 +260,7 @@ export default function StoragePage() {
                 <span className="font-mono text-sm font-medium">{selectedKey}</span>
                 {getFileTypeBadge(selectedKey)}
               </div>
-              <FileViewer content={fileContent} fileName={selectedKey} maxHeight="calc(100vh - 250px)" />
+              <FileViewer content={fileContent} fileName={selectedKey} maxHeight="calc(100vh - 250px)" onSave={handleSave} />
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import {
   S3Client,
   GetObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 
 let client: S3Client | null = null;
@@ -65,4 +66,22 @@ export async function getText(key: string): Promise<string> {
     new GetObjectCommand({ Bucket: bucket, Key: key }),
   );
   return (await res.Body?.transformToString()) ?? "";
+}
+
+export async function putText(
+  key: string,
+  body: string,
+  contentType = "text/plain",
+): Promise<void> {
+  const s3 = getClient();
+  if (!s3) throw new Error("R2 client not configured");
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
 }
