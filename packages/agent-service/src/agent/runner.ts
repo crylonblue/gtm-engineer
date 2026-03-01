@@ -2,7 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import type { UserMessage, AssistantMessage as PiAssistantMessage } from "@mariozechner/pi-ai";
-import { getAgent, createRun, updateRun, updateAgentLastRun, getOrCreateConversation, getConversationMessages, addConversationMessage } from "../convex/client.js";
+import { getAgent, createRun, updateRun, updateAgentLastRun, getOrCreateConversation, getConversationMessages, addConversationMessage, updateConversationMessage } from "../convex/client.js";
 import { buildSystemPrompt, DEFAULT_HEARTBEAT_PROMPT } from "./prompt.js";
 import { getAllTools, getToolMetadata } from "../tools/index.js";
 import { toAgentTools } from "../tools/bridge.js";
@@ -108,7 +108,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
     let messageCount = 0;
     let toolUseCount = 0;
 
-    // Accumulate assistant text and tool calls for a single consolidated message
+    // ── Prepare streaming state ────────────────────────────────────
     let accumulatedText = "";
     const toolCalls: Array<{
       id: string;
@@ -118,20 +118,62 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
       result?: string;
     }> = [];
 
-    // Subscribe to events for logging & accumulation
+    // Run the agent
+    console.log(`[runner] Starting agent prompt...`);
+    const kickoffMessage = useHeartbeat
+      ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
+      : `Execute your task. Trigger: ${trigger}`;
+
+    // Save user message + streaming assistant placeholder
+    if (useHeartbeat) {
+      await addConversationMessage(conversationId, "user", "__heartbeat__");
+    } else {
+      await addConversationMessage(conversationId, "user", kickoffMessage);
+    }
+    const assistantMsgId = await addConversationMessage(conversationId, "assistant", "", undefined, true);
+
+    // Debounced flush to avoid spamming Convex with every token
+    let flushTimer: ReturnType<typeof setTimeout> | undefined;
+    let flushPending = false;
+    const flushToConvex = (immediate = false) => {
+      flushPending = true;
+      if (immediate) {
+        clearTimeout(flushTimer);
+        flushTimer = undefined;
+        flushPending = false;
+        updateConversationMessage(assistantMsgId, {
+          content: accumulatedText,
+          ...(toolCalls.length > 0 ? { toolCalls: [...toolCalls] } : {}),
+        }).catch(console.error);
+      } else if (!flushTimer) {
+        flushTimer = setTimeout(() => {
+          flushTimer = undefined;
+          flushPending = false;
+          updateConversationMessage(assistantMsgId, {
+            content: accumulatedText,
+            ...(toolCalls.length > 0 ? { toolCalls: [...toolCalls] } : {}),
+          }).catch(console.error);
+        }, 300);
+      }
+    };
+
+    // Subscribe to events for live UI updates
     piAgent.subscribe((event: AgentEvent) => {
       switch (event.type) {
+        case "message_update": {
+          // Text deltas — accumulate and debounce-flush
+          const ae = (event as Record<string, unknown>).assistantMessageEvent as { type: string; delta?: string } | undefined;
+          if (ae?.type === "text_delta" && ae.delta) {
+            accumulatedText += ae.delta;
+            flushToConvex();
+          }
+          break;
+        }
         case "message_end": {
           messageCount++;
           const msg = event.message;
           if ("role" in msg && msg.role === "assistant") {
             const blocks = Array.isArray(msg.content) ? msg.content : [];
-            // Accumulate text blocks
-            const text = blocks
-              .filter((b): b is { type: "text"; text: string } => "type" in b && b.type === "text")
-              .map((b) => b.text)
-              .join("");
-            if (text) accumulatedText += (accumulatedText ? "\n\n" : "") + text;
             // Collect tool call entries from this message
             for (const block of blocks) {
               if ("type" in block && block.type === "toolCall") {
@@ -152,6 +194,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
           console.log(`  Tool: ${event.toolName} (${event.toolCallId})`);
           const tc = toolCalls.find((t) => t.id === event.toolCallId);
           if (tc) tc.status = "running";
+          flushToConvex(true);
           break;
         }
         case "tool_execution_end": {
@@ -160,6 +203,7 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
             tc.status = event.isError ? "error" : "complete";
             tc.result = typeof event.result === "string" ? event.result : JSON.stringify(event.result ?? {});
           }
+          flushToConvex(true);
           if (isR2Enabled()) {
             uploadJson(`runs/${runId}/tools/${toolUseCount}-${event.toolName}.json`, {
               toolCallId: event.toolCallId,
@@ -173,32 +217,17 @@ export async function runAgent(agentId: string, trigger: "manual" | "schedule" |
       }
     });
 
-    // Run the agent
-    console.log(`[runner] Starting agent prompt...`);
-    const kickoffMessage = useHeartbeat
-      ? (agent.heartbeat || DEFAULT_HEARTBEAT_PROMPT)
-      : `Execute your task. Trigger: ${trigger}`;
-
-    // Save a heartbeat marker to the conversation (the full prompt goes only to the LLM)
-    if (useHeartbeat) {
-      await addConversationMessage(conversationId, "user", "__heartbeat__");
-    } else {
-      await addConversationMessage(conversationId, "user", kickoffMessage);
-    }
-
     await piAgent.prompt(kickoffMessage);
     await piAgent.waitForIdle();
+    clearTimeout(flushTimer);
     console.log(`[runner] Agent finished. messages=${messageCount} tools=${toolUseCount}`);
 
-    // Save one consolidated assistant message with content + tool calls
-    if (accumulatedText || toolCalls.length > 0) {
-      await addConversationMessage(
-        conversationId,
-        "assistant",
-        accumulatedText,
-        toolCalls.length > 0 ? toolCalls : undefined,
-      );
-    }
+    // Final update — set content, tool calls, and mark streaming done
+    await updateConversationMessage(assistantMsgId, {
+      content: accumulatedText,
+      isStreaming: false,
+      ...(toolCalls.length > 0 ? { toolCalls: [...toolCalls] } : {}),
+    });
 
     // Update run as completed
     console.log(`[runner] Updating run ${runId} as completed...`);

@@ -119,11 +119,30 @@ export async function addConversationMessage(
     status: "pending" | "running" | "complete" | "error";
     result?: string;
   }>,
+  isStreaming?: boolean,
 ): Promise<string> {
   return await getClient().mutation(anyApi.messages.save, {
     conversationId,
     role,
     content,
     ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+    ...(isStreaming !== undefined ? { isStreaming } : {}),
   }) as string;
+}
+
+export async function updateConversationMessage(
+  messageId: string,
+  fields: {
+    content?: string;
+    isStreaming?: boolean;
+    toolCalls?: Array<{
+      id: string;
+      name: string;
+      args: string;
+      status: "pending" | "running" | "complete" | "error";
+      result?: string;
+    }>;
+  },
+): Promise<void> {
+  await getClient().mutation(anyApi.messages.update, { id: messageId, ...fields });
 }
